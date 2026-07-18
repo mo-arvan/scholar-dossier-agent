@@ -1,0 +1,1 @@
+[system] You issued no tool calls and did not call finish. Run a query for any objective still empty or thin, or call finish with your per-objective coverage if every lane is genuinely done.

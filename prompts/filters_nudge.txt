@@ -1,0 +1,7 @@
+[system check] The mechanical checks below fail; resolve them now, in this session. The reviewer curates, you record.
+---
+$count publication record(s) from the transcript's OpenAlex/PubMed results are unaccounted for. Append each as a publications entry (batch many append_entry calls per turn); for one that is not this scholar's work, call skip_record with its doi, pmid, or exact title and the reason, that settles it for every later run:
+$lines
+---
+$count publications entr(y/ies) lack a doi the transcript's own record carries. Patch each with the value shown:
+$lines

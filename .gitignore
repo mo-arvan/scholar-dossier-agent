@@ -1,0 +1,11 @@
+.env
+.venv/
+outputs/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Your own inputs, and everything a run fetches about real people. data/tsbm_style/ ships with
+# the repo (aggregate style targets, no personal data); nothing else under data/ belongs in git.
+data/*
+!data/tsbm_style/

@@ -1,0 +1,14 @@
+# Per-feature guided-revision instructions, injected into $guidance of revise_impact.txt when a
+# style feature runs over the TSBM target (top-1 feature per round). Format: "<feature>: <one-line
+# instruction>", one per line; `default` is the fallback. Lines starting with # are ignored.
+default: Use plainer, more direct language.
+syn_avg_sent_length: Shorten each statement; keep it to a single clause where possible.
+syn_sent_length_std: Bring this statement's length toward a typical short benefit statement; avoid an extreme, whether very long or very short.
+syn_avg_parse_depth: Reduce clause nesting; split embedded subordinate clauses into a single direct statement.
+syn_adj_ratio: Cut adjectives that do no work; keep only modifiers that change the meaning.
+lex_avg_word_length: Prefer shorter, plainer everyday words over long Latinate ones where meaning is preserved.
+lex_avg_syllables_per_word: Prefer shorter, plainer words with fewer syllables; keep necessary clinical or technical terms.
+lex_polysyllabic_ratio: Replace long polysyllabic words with plain ones where one works; keep necessary clinical or technical terms.
+sty_passive_voice_ratio: Rewrite in active voice; name who does what (e.g. 'the program screened patients', not 'patients were screened').
+sty_modal_deontic_per_kw: State each benefit as a fact already realized, not a future or obligation; drop 'will', 'should', 'must'.
+dis_nominalization_per_kw: Prefer verbs over noun forms (write 'studies how X varies' not 'characterization of X'; 'fewer patients enroll' not 'underrepresentation').

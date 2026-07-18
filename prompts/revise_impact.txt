@@ -1,0 +1,7 @@
+Revise this one-sentence benefit statement to apply this change: $guidance
+
+Stay faithful: keep every load-bearing fact exact, the named entity (a program, policy, trial, drug, body, or company), every key number, the place, and the scholar's role, and change nothing about what happened. Reword or restructure everything else freely to make the change land, and keep it to one sentence. If it already fits, return it unchanged.
+
+Statement: $statement
+
+Return only the revised sentence, no preamble or quotes.

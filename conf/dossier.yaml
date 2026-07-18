@@ -1,0 +1,23 @@
+defaults:
+  - _self_
+  - model: gpt5-1-east2
+
+dossier:
+  scholars_path: "data/cohort.csv"
+  only: ""
+  prompt_path: "prompts/research_scholar.txt"
+  out_dir: "outputs/dossiers"
+  max_research_runs: 3
+  max_turns_per_run: 25
+  scholar_workers: 4
+  max_context_tokens: 300000
+  reasoning_effort: "medium"
+  cheap_model_name: "gpt-5.4-mini"
+  compaction_context_tokens: 128000
+  prompt_cache_key: true
+  max_assembler_turns: 20
+  source_gate_attempts: 3
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -1,0 +1,61 @@
+{
+  "cache_schema_version": 2,
+  "target_stats": {
+    "syn_avg_sent_length": [
+      17.67105263157895,
+      5.4153489412155755
+    ],
+    "syn_avg_parse_depth": [
+      5.934210526315789,
+      1.6649286875497218
+    ],
+    "syn_adj_ratio": [
+      0.09635093229949758,
+      0.07030949443360184
+    ],
+    "lex_avg_word_length": [
+      5.71712200136881,
+      0.64975066238727
+    ],
+    "lex_avg_syllables_per_word": [
+      1.8913195198883355,
+      0.2546039182993759
+    ],
+    "lex_polysyllabic_ratio": [
+      0.2437550993377577,
+      0.1051996060158442
+    ],
+    "sty_passive_voice_ratio": [
+      0.13157894736842105,
+      0.33803243628066126
+    ],
+    "sty_modal_deontic_per_kw": [
+      3.4244264507422404,
+      13.361873651453568
+    ],
+    "dis_nominalization_per_kw": [
+      44.57881715390297,
+      53.54026913453176
+    ]
+  },
+  "corpus_label": "tsbm_impact_statements",
+  "n_ref_items": 76,
+  "primary_keys": [
+    "syn_avg_sent_length",
+    "syn_avg_parse_depth",
+    "syn_adj_ratio",
+    "lex_avg_word_length",
+    "lex_avg_syllables_per_word",
+    "lex_polysyllabic_ratio",
+    "sty_passive_voice_ratio",
+    "sty_modal_deontic_per_kw",
+    "dis_nominalization_per_kw"
+  ],
+  "excluded_features": [
+    "syn_sent_length_std"
+  ],
+  "excluded_reason": "single-sentence reference docs make within-doc rhythm undefined",
+  "computed_at": "2026-06-11T17:35:12.209696+00:00",
+  "register": "translational-science-benefit-statement",
+  "axis_novelty": "TSBM impact statements: short, concrete, verb-forward real-world benefit claims"
+}
