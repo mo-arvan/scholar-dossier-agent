@@ -106,6 +106,22 @@ it.
 Anything you put under `data/` is yours and is gitignored, including the cache of everything a run
 fetches about real people.
 
+## Citation
+
+If you use this work, please cite the preprint:
+
+```bibtex
+@misc{arvan2026realworldevaluationaiagent,
+      title={Real-World Evaluation of an AI Agent Drafting Translational Impact Summaries},
+      author={Mohammad Arvan and Amber E. Osterholt and Bailee Rue and Yuvaneswaren R. Sureshbabu and Krishna R. Patel and Rebecca T. Feinstein and Bethany C. Bray and Niranjan S. Karnik},
+      year={2026},
+      eprint={2607.16989},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2607.16989},
+}
+```
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
