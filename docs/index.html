@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K Tracker</title>
+<meta name="description" content="A human-in-the-loop AI agent that assembles a scholar's impact record for CTSA evaluation staff to review. 81.7% of findings usable, 14 minutes of review per scholar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #16263A; --title: #333333; --body: #555555; --mute: #8A93A0; --hair: #DCE2E9; --panel: #F4F6F8;
+    --blue: #0077BB; --teal: #009988; --cyan: #33BBEE; --orange: #EE7733;
+    --sans: BlinkMacSystemFont, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --text: "Noto Sans", BlinkMacSystemFont, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: #fff; color: var(--body); font: 400 16px/1.5 var(--text); overflow-x: hidden; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  img { max-width: 100%; height: auto; display: block; }
+  .wrap { max-width: 80rem; margin: 0 auto; padding: 0 2rem; }
+  section { padding: 4rem 0; scroll-margin-top: 4.5rem; }
+  section + section { border-top: 1px solid var(--hair); }
+  h1, h2, h3 { font-family: var(--sans); color: var(--title); font-weight: 600; line-height: 1.125; margin: 0; }
+  h1 { font-size: 3rem; }
+  h2 { font-size: 1.85rem; margin-bottom: 1rem; }
+  h3 { font-size: 1.15rem; margin-bottom: .4rem; }
+  p { margin: 0; }
+  p + p { margin-top: .9rem; }
+  .subtitle { font-size: 1.5rem; line-height: 1.25; color: var(--body); margin-top: .75rem; }
+  .lede { font-size: 1.125rem; max-width: 40rem; }
+
+  nav { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid var(--hair); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; min-height: 3.75rem; gap: 1.5rem; }
+  nav .brand { font-family: var(--sans); font-weight: 600; font-size: 1.25rem; color: var(--ink); }
+  nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.75rem; }
+  nav li a { color: var(--body); font-size: 1rem; padding: .35rem 0; white-space: nowrap; }
+  nav li a:hover { color: var(--blue); text-decoration: none; }
+  nav li a.active { color: var(--title); font-weight: 700; }
+
+  .hero { padding: 4rem 0 3.5rem; }
+  .hero .lede { margin-top: 1.5rem; }
+  .links { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.75rem; }
+  .pill { display: inline-flex; align-items: center; gap: .5rem; height: 2.5em; padding: 0 1.25em; background: var(--ink); color: #fff; border-radius: 9999px; line-height: 1; }
+  .pill:hover { background: #0f1a2a; text-decoration: none; }
+  .pill svg { width: 1em; height: 1em; fill: currentColor; }
+  .status { color: var(--mute); font-size: .95rem; margin-top: 1.25rem; }
+
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4rem; align-items: center; }
+  .split.top { align-items: start; }
+  .sysfig { width: 100%; }
+  .sources { margin-top: 1rem; max-width: 40rem; }
+
+  /* Worksheet, as the deck draws it */
+  .sheetwrap { overflow-x: auto; min-width: 0; }
+  .sheet { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .sheet th { background: var(--ink); color: #fff; text-align: left; padding: .5rem .7rem; font-weight: 700; }
+  .sheet td { padding: .42rem .7rem; border-bottom: 1px solid var(--hair); color: var(--title); }
+  .sheet td.src { color: var(--blue); }
+  .sheet td { white-space: nowrap; }
+  .sheet td.act::before { content: ""; display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; margin-right: .45rem; vertical-align: 0; background: var(--c); }
+  .sheet td.accept { --c: var(--teal); } .sheet td.edit { --c: var(--blue); } .sheet td.reject { --c: var(--orange); }
+
+  /* Result tiles, as the deck draws them */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 2rem; }
+  .tile { background: var(--panel); border-top: 5px solid var(--c); padding: 1.25rem 1.4rem 1.2rem; }
+  .tile .n { font: 700 2.8rem/1.1 var(--sans); color: var(--c); }
+  .tile .n small { font-size: 1.4rem; }
+  .tile .l { font-weight: 700; color: var(--title); margin-top: .5rem; }
+  .tile .s { color: var(--body); font-size: .92rem; }
+  .c-blue { --c: var(--blue); } .c-teal { --c: var(--teal); } .c-orange { --c: var(--orange); } .c-cyan { --c: var(--cyan); } .c-ink { --c: var(--ink); }
+  #means .tiles { margin-top: 1.5rem; }
+  #means { padding: 3.5rem 0; }
+  .note { color: var(--body); margin-top: 1.25rem; }
+  .note small { display: block; color: var(--mute); font-style: italic; margin-top: .2rem; }
+  .chart .sub { color: var(--mute); font-size: .92rem; margin-bottom: .75rem; }
+  .chart .box { position: relative; width: 100%; }
+
+  /* Impact cards, as the poster typesets them */
+  .cards { display: grid; gap: 1rem; }
+  .card { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 1.25rem; align-items: center; background: #fff; border: 1px solid var(--hair); border-left: 4px solid var(--c); border-radius: 6px; padding: 1rem 1.25rem 1rem 1rem; }
+  .card .dom { text-align: center; color: var(--c); }
+  .card .dom span { display: block; font: 700 .74rem/1 var(--text); letter-spacing: .1em; text-transform: uppercase; margin-bottom: .5rem; }
+  .card .dom svg { width: 2.6rem; height: 2.6rem; }
+  .card p { color: var(--title); }
+  .card.stat { grid-template-columns: 9rem minmax(0, 1fr); }
+  .card.stat .fig { font: 700 1.9rem/1.1 var(--sans); color: var(--c); }
+  .card.stat .fig small { font-size: 1.1rem; }
+  .card.stat .fig span { display: block; font: 400 .8rem/1.3 var(--text); color: var(--mute); margin-top: .2rem; }
+  .card.stat p { font-family: var(--sans); font-weight: 600; font-size: 1.1rem; }
+
+  .linklist { list-style: none; margin: 0; padding: 0; }
+  .linklist li { padding: 1rem 0; border-top: 1px solid var(--hair); }
+  .linklist li:last-child { border-bottom: 1px solid var(--hair); }
+  .linklist strong { font-family: var(--sans); color: var(--title); font-weight: 600; display: block; }
+  pre { background: var(--panel); border-radius: 6px; padding: 1.25rem; overflow-x: auto; font-size: .85rem; line-height: 1.5; margin: 0; }
+
+  footer { padding: 2.5rem 0 3rem; border-top: 1px solid var(--hair); color: var(--mute); font-size: .9rem; }
+  footer p { max-width: 60rem; }
+  footer .links { margin-top: 1rem; gap: 1.25rem; }
+  footer .links a { color: var(--body); }
+
+  @media (max-width: 60rem) {
+    h1 { font-size: 2.25rem; } h2 { font-size: 1.5rem; } .subtitle { font-size: 1.2rem; }
+    .split, .tiles { grid-template-columns: 1fr; gap: 2rem; }
+    .tiles { grid-template-columns: 1fr; gap: 1rem; }
+    .wrap { padding: 0 1.25rem; }
+    section { padding: 3rem 0; }
+  }
+  @media (max-width: 72rem) { nav ul { gap: 1.1rem; } nav li a { font-size: .92rem; } }
+  @media (max-width: 52rem) { nav .brand { display: none; } nav .wrap { justify-content: center; } }
+  @media (max-width: 34rem) { nav ul { flex-wrap: wrap; justify-content: center; gap: .5rem 1.1rem; padding: .6rem 0; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top">K Tracker</a>
+    <ul>
+      <li><a href="#gaps">The problem</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#examples">Examples</a></li>
+      <li><a href="#start">Get started</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="hero" id="top">
+  <div class="wrap split">
+   <div>
+    <h1>K Tracker</h1>
+    <p class="subtitle">AI-assisted scholar impact reporting for CTSA hubs</p>
+    <p class="lede">About 15 hours to assemble a scholar's impact record by hand. About 14 minutes to review the agent's draft.</p>
+    <div class="links">
+      <a class="pill" href="https://arxiv.org/abs/2607.16989"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6zM14 3.5V8h4.5zM8 12h8v1.5H8zm0 3h8v1.5H8zm0 3h5v1.5H8z"/></svg>Paper</a>
+      <a class="pill" href="https://github.com/mo-arvan/scholar-dossier-agent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2.9-.3 1.9-.4 2.9-.4s2 .1 2.9.4c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>Code</a>
+      <a class="pill" href="mailto:marvan3@uic.edu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5h20v14H2zm2 2v.6l8 5 8-5V7zm0 2.9V17h16V9.9l-8 5z"/></svg>Contact</a>
+    </div>
+    <p class="status">Preprint on arXiv. Under review at JCTS. MIT license.</p>
+   </div>
+   <img class="sysfig" src="assets/system.png" width="1158" height="880" alt="A scholar seed goes to an AI agent that queries research tools and writes an evidence record; a human review step sits between the record and its use.">
+  </div>
+</section>
+
+<section id="means">
+  <div class="wrap">
+    <h2>What it saves a hub</h2>
+    <div class="tiles">
+      <div class="tile c-blue"><div class="n">98<small>%</small></div><p class="l">less staff time per scholar</p><p class="s">15 h by hand to a 14-min review</p></div>
+      <div class="tile c-teal"><div class="n">~0.45 <small>FTE</small></div><p class="l">back a year, per hub</p><p class="s">about 900 staff-hours across 60 tracked scholars</p></div>
+      <div class="tile c-ink"><div class="n">$1.50</div><p class="l">compute per scholar</p><p class="s">measured, at standard token pricing</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="gaps">
+  <div class="wrap split">
+    <div>
+      <h2>Why impact reporting is hard</h2>
+      <p class="lede">Three gaps. One system built against all three.</p>
+    </div>
+    <div class="cards">
+      <div class="card stat c-blue"><div class="fig">11.9<small>%</small><span>of scholars answer the hub's requests for their own updates</span></div><p>Asking the scholar does not work.</p></div>
+      <div class="card stat c-teal"><div class="fig">1 in 3<span>findings sit outside routine sources</span></div><p>The databases do not reach it.</p></div>
+      <div class="card stat c-orange"><div class="fig">15 <small>h</small><span>per scholar, by hand</span></div><p>Writing it is where the time goes.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap split">
+    <div>
+      <h2>Every finding keeps its sources, open to audit</h2>
+      <p class="lede">Name, affiliation, and grants go in. A sourced record and a one-sentence impact summary per finding come out. A curator accepts, edits, or rejects each one. A finding with an unverified source stays in, flagged for the curator.</p>
+      <p class="sources">Searches OpenAlex, PubMed, ORCID, ClinicalTrials.gov, NIH RePORTER, and the open web.</p>
+    </div>
+    <div class="sheetwrap"><table class="sheet" aria-label="Review worksheet, one row per finding">
+      <thead><tr><th>scholar</th><th>section: item</th><th>source</th><th>action</th></tr></thead>
+      <tbody>
+        <tr><td>Jane Doe</td><td>key_profiles: homepage</td><td class="src">example.edu/doe</td><td class="act accept">accept</td></tr>
+        <tr><td>Jane Doe</td><td>key_profiles: orcid</td><td class="src">orcid.org/0002</td><td class="act accept">accept</td></tr>
+        <tr><td>Jane Doe</td><td>career_trajectory: 2021</td><td class="src">example.edu/doe</td><td class="act edit">edit</td></tr>
+        <tr><td>Jane Doe</td><td>grants: NHLBI</td><td class="src">reporter.nih/p1</td><td class="act accept">accept</td></tr>
+        <tr><td>Jane Doe</td><td>media_mentions: Tribune</td><td class="src">tribune.example/a1</td><td class="act reject">reject</td></tr>
+        <tr><td>Jane Doe</td><td>clinical_impacts: guideline</td><td class="src">doi.org/10.0/ex1</td><td class="act accept">accept</td></tr>
+        <tr><td>Jane Doe</td><td>community_impacts: tool</td><td class="src">example.edu/scr</td><td class="act edit">edit</td></tr>
+        <tr><td>Jane Doe</td><td>economic_impacts: patent</td><td class="src">doi.org/10.0/ex2</td><td class="act accept">accept</td></tr>
+        <tr><td>Jane Doe</td><td>policy_impacts: legislation</td><td class="src">doi.org/10.0/ex3</td><td class="act reject">reject</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <h2>In the real workflow, curators keep four of five findings</h2>
+    <p class="lede">Two curators at one CTSA hub reviewed all 507 findings for 10 KL2/K12 scholars.</p>
+    <div class="tiles">
+      <div class="tile c-blue"><div class="n">81.7<small>%</small></div><p class="l">findings usable</p><p class="s">accepted or edited by both</p></div>
+      <div class="tile c-teal"><div class="n">14 <small>min</small></div><p class="l">review per scholar</p><p class="s">vs about 15 h by hand</p></div>
+      <div class="tile c-orange"><div class="n">&lt;5<small>%</small></div><p class="l">edited per curator</p><p class="s">75% accepted unchanged by both</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="sections">
+  <div class="wrap split">
+    <div>
+      <h2>Review actions by section</h2>
+      <p class="lede">Usable: both curators accepted or edited. Split: one rejected. Bar end shows the usable share.</p>
+    </div>
+    <div class="chart">
+      <div class="box" style="height:340px"><canvas id="cSections" role="img" aria-label="Stacked bars of review actions by section"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<section id="examples">
+  <div class="wrap split">
+    <div>
+      <h2>Four impact summaries, as the curators accepted them</h2>
+      <p class="lede">One per Translational Science Benefits Model domain.</p>
+    </div>
+    <div class="cards">
+      <div class="card c-teal"><div class="dom"><span>Clinical</span><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M12 10a2 2 0 1 0-1.732-3H10a3 3 0 0 0-3 3v9c-.552 0-1.005.449-.955.999A11 11 0 0 0 14 29.583V32c0 1.306.835 2.418 2 2.83a7.25 7.25 0 0 0 14.5-.08v-4a3.75 3.75 0 1 1 7.5 0v2.42a3.001 3.001 0 1 0 2 0v-2.42a5.75 5.75 0 0 0-11.5 0v4a5.25 5.25 0 0 1-10.5.08A3 3 0 0 0 20 32v-2.417a11 11 0 0 0 7.955-9.584c.05-.55-.403-.999-.955-.999v-9a3 3 0 0 0-3-3h-.268A2 2 0 0 0 20 8a2 2 0 0 0 3.732 1H24a1 1 0 0 1 1 1v9h.21c-.553 0-.993.45-1.07.997a7.21 7.21 0 0 1-14.28 0C9.783 19.45 9.343 19 8.79 19H9v-9a1 1 0 0 1 1-1h.268A2 2 0 0 0 12 10"/></svg></div><p>A multidrug-resistant-organism alert tool raised facility registrations from 40% to 89% across 121 Veterans Affairs facilities.</p></div>
+      <div class="card c-blue"><div class="dom"><span>Community</span><svg viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path fill-rule="evenodd" d="M42 17a6 6 0 0 1-5.57 5.985l-3.051 3.05c.855 1.447 1.24 3.367 1.429 5.502c.192 2.169.192 4.705.192 7.429V40h-2v-1c0-2.764 0-5.215-.184-7.286c-.161-1.814-.455-3.227-.943-4.253c-1.197-.16-2.29-.762-3.226-1.504c-1.104-.874-2.086-2.015-2.894-3.115a29 29 0 0 1-2.105-3.342c-1.344.93-3.155 1.5-5.148 1.5c-4.142 0-7.5-2.462-7.5-5.5c0-2.793 2.838-5.1 6.515-5.453C18.797 7.692 22.335 6 26.5 6c4.708 0 8.616 2.163 9.369 5.001L36 11a6 6 0 0 1 6 6m-11.973.573A14.5 14.5 0 0 1 26.5 18q-.652 0-1.28-.054l-.076.108c.108.208.25.477.424.787a27 27 0 0 0 1.908 2.967v-.146c1.105 0 2.265-.597 3.227-1.308q.111-.08.215-.163a5.96 5.96 0 0 1-.891-2.618m2.226 4.113a6 6 0 0 0 1.694.953l-2.62 2.62q-.698-.283-1.439-.87a11 11 0 0 1-1.003-.914c1.183-.306 2.23-.939 3.006-1.511q.19-.14.362-.278" clip-rule="evenodd"/><path d="M15.504 28.002a2.5 2.5 0 1 0-.004-5a2.5 2.5 0 0 0 .004 5m-7 4a2.5 2.5 0 1 0-.004-5a2.5 2.5 0 0 0 .004 5M28.002 29.5a2.5 2.5 0 1 1-5 .004a2.5 2.5 0 0 1 5-.004M15 29a2 2 0 0 1 2 2v2h2a2 2 0 1 1 0 4h-4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2m-5 6a2 2 0 1 0-4 0v5a2 2 0 0 0 2 2h4a2 2 0 1 0 0-4h-2zm16-2a2 2 0 0 0-2 2v3h-2a2 2 0 1 0 0 4h4a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2"/></g></svg></div><p>A program lifted colorectal cancer screening from 13% to 20% among 1,252 patients at three Federally Qualified Health Centers.</p></div>
+      <div class="card c-cyan"><div class="dom"><span>Economic</span><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M24.039 6c-4.517 0-8.632 1.492-11.067 2.711q-.33.165-.616.322c-.378.206-.7.398-.956.567l2.77 4.078l1.304.519c5.096 2.571 11.93 2.571 17.027 0l1.48-.768L36.6 9.6a16 16 0 0 0-1.689-.957C32.488 7.437 28.471 6 24.04 6m-6.442 4.616a25 25 0 0 1-2.901-.728C16.978 8.875 20.377 7.8 24.04 7.8c2.537 0 4.936.516 6.92 1.17c-2.325.327-4.806.882-7.17 1.565c-1.86.538-4.034.48-6.192.081m15.96 5.064l-.246.124c-5.606 2.828-13.042 2.828-18.648 0l-.233-.118C6.008 24.927-.422 41.997 24.039 41.997S41.913 24.61 33.557 15.68M23 24a2 2 0 1 0 0 4zm2-2v-1h-2v1a4 4 0 0 0 0 8v4c-.87 0-1.611-.555-1.887-1.333a1 1 0 1 0-1.885.666A4 4 0 0 0 23 36v1h2v-1a4 4 0 0 0 0-8v-4c.87 0 1.611.555 1.887 1.333a1 1 0 1 0 1.885-.666A4 4 0 0 0 25 22m0 8v4a2 2 0 1 0 0-4" clip-rule="evenodd"/></svg></div><p>A sickle-cell transplant program cut annual per-patient health-care costs from $64,634 to $16,281 for 16 adults.</p></div>
+      <div class="card c-orange"><div class="dom"><span>Policy</span><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M25 6h-2v4.17a3 3 0 0 0-1.97 2.409l-7.29 1.955a1 1 0 0 0-.557.39l-5.855 8.294H6.12a8.5 8.5 0 0 0 .337 2.379c.95 3.256 3.797 5.62 7.163 5.62c3.495 0 6.431-2.55 7.264-6a8.5 8.5 0 0 0 .236-1.996v-.003h-.935l-4.6-7.108l5.842-1.567A3 3 0 0 0 23 15.829V38h-3v2h-6v2h20v-2h-6v-2h-3V15.83a3 3 0 0 0 2-2.783l5.14-1.378L28.473 17H27c0 .69.082 1.36.236 2c.833 3.45 3.77 6 7.264 6c3.365 0 6.213-2.364 7.163-5.621q.054-.187.1-.379A8.5 8.5 0 0 0 42 17.003V17h-1.946L35.36 9.49a1 1 0 0 0-1.12-.456l-7.88 2.114a3 3 0 0 0-1.36-.977zm5.901 11h6.795l-3.236-5.177zm-13.098 6.218l-3.839-5.933l-4.188 5.933z" clip-rule="evenodd"/></svg></div><p>Illinois passed a 2018 law letting schools stock albuterol inhalers for asthma emergencies.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap split">
+    <div>
+      <h2>Bring it to your hub</h2>
+      <p class="lede">Built in one hub. Looking for the next.</p>
+    </div>
+    <ul class="linklist">
+      <li><strong>Read the paper</strong><a href="https://arxiv.org/abs/2607.16989">arXiv 2607.16989</a></li>
+      <li><strong>Run it on your scholars</strong><a href="https://github.com/mo-arvan/scholar-dossier-agent">Repository</a></li>
+    </ul>
+  </div>
+</section>
+
+<section id="cite">
+  <div class="wrap split top">
+    <div>
+      <h2>Cite</h2>
+    </div>
+<pre>@misc{arvan2026realworldevaluationaiagent,
+  title={Real-World Evaluation of an AI Agent Drafting Translational Impact Summaries},
+  author={Mohammad Arvan and Amber E. Osterholt and Bailee Rue and Yuvaneswaren R. Sureshbabu and Krishna R. Patel and Rebecca T. Feinstein and Bethany C. Bray and Niranjan S. Karnik},
+  year={2026},
+  eprint={2607.16989},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL},
+  url={https://arxiv.org/abs/2607.16989},
+}</pre>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Mohammad Arvan, Amber E. Osterholt, Bailee Rue, Yuvaneswaren R. Sureshbabu, Krishna R. Patel, Rebecca T. Feinstein, Bethany C. Bray, and Niranjan S. Karnik. University of Illinois Chicago, Center for Clinical and Translational Science.</p>
+    <p>This work was partially supported by the National Center for Advancing Translational Sciences (NCATS), National Institutes of Health, through Grant Award Number UM1TR005438. The content is solely the responsibility of the authors and does not necessarily represent the official views of the NIH.</p>
+    <div class="links"><a href="https://arxiv.org/abs/2607.16989">Paper</a><a href="https://github.com/mo-arvan/scholar-dossier-agent">Code</a><a href="https://github.com/mo-arvan/scholar-dossier-agent/blob/main/LICENSE">MIT license</a><a href="mailto:marvan3@uic.edu">marvan3@uic.edu</a></div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Nav: the active link is the section under the header; the last link when scrolled to the bottom.
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav li a'));
+  var secs = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+  var navEl = document.querySelector('nav'), lockUntil = 0;
+  function setActive(href) { links.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === href); }); }
+  function update() {
+    if (Date.now() < lockUntil) return;
+    var y = window.scrollY + navEl.offsetHeight + 8, current = null;
+    secs.forEach(function (s, i) { if (s && s.getBoundingClientRect().top + window.scrollY <= y) current = links[i].getAttribute('href'); });
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) current = links[links.length - 1].getAttribute('href');
+    setActive(current);
+  }
+  window.addEventListener('scroll', function () { requestAnimationFrame(update); }, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+  links.concat(Array.prototype.slice.call(document.querySelectorAll('nav .brand'))).forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      var href = a.getAttribute('href'), s = document.querySelector(href);
+      if (!s) return;
+      e.preventDefault();
+      if (a.classList.contains('brand')) { setActive(null); } else { setActive(href); }
+      lockUntil = Date.now() + 900;
+      s.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      if (history.replaceState) history.replaceState(null, '', href);
+    });
+  });
+
+  if (!window.Chart) return;
+  var BLUE = '#0077BB', CYAN = '#33BBEE', TEAL = '#009988', ORANGE = '#EE7733', GREY = '#BBBBBB';
+  var INK2 = '#555555', MUTE = '#8A93A0', GRID = '#E4E9EE', SURF = '#ffffff';
+  Chart.defaults.font.family = '"Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif';
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = INK2;
+  Chart.defaults.animation.duration = reduced ? 0 : 900;
+  Chart.defaults.plugins.tooltip.backgroundColor = '#363636';
+  Chart.defaults.plugins.tooltip.padding = 8;
+  Chart.defaults.plugins.legend.labels.boxWidth = 10;
+  Chart.defaults.plugins.legend.labels.boxHeight = 10;
+
+  // Selective direct labels at the bar tip for the datasets a chart names.
+  Chart.register({
+    id: 'endLabels',
+    afterDatasetsDraw: function (chart, args, opts) {
+      if (!opts || !opts.datasets) return;
+      var ctx = chart.ctx;
+      ctx.save();
+      ctx.font = '600 12px "Noto Sans", Helvetica, Arial, sans-serif';
+      ctx.fillStyle = INK2; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      opts.datasets.forEach(function (di) {
+        chart.getDatasetMeta(di).data.forEach(function (bar, i) {
+          var txt = opts.fmt(chart.data.datasets[di].data[i], i);
+          if (txt != null) ctx.fillText(txt, bar.x + 6, bar.y);
+        });
+      });
+      ctx.restore();
+    }
+  });
+
+  function axis(extra) { return Object.assign({ grid: { color: GRID, drawTicks: false }, border: { display: false }, ticks: { color: MUTE } }, extra || {}); }
+
+  // Review actions by section (manuscript Table 1), as shares so the Overall row sits on the same axis.
+  var rows = [
+    ['Profiles', 80, 7, 6], ['Career trajectory', 89, 3, 0], ['Media', 44, 6, 5], ['Grants', 80, 12, 1],
+    ['Clinical impact', 57, 12, 8], ['Community impact', 37, 13, 7], ['Economic impact', 14, 6, 0], ['Policy impact', 13, 3, 4],
+    ['Overall', 414, 62, 31]
+  ];
+  var totals = rows.map(function (r) { return r[1] + r[2] + r[3]; });
+  function share(k) { return rows.map(function (r, i) { return 100 * r[k] / totals[i]; }); }
+  function seg(label, k, color, gap) {
+    return { label: label, data: share(k), backgroundColor: color, barThickness: 18,
+      borderColor: SURF, borderWidth: gap ? { left: 2 } : 0 };
+  }
+  new Chart(document.getElementById('cSections'), {
+    type: 'bar',
+    data: { labels: rows.map(function (r) { return r[0]; }), datasets: [
+      seg('Both usable', 1, BLUE, false), seg('Split', 2, CYAN, true), seg('Both reject', 3, ORANGE, true)
+    ] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      layout: { padding: { right: 48, left: 12 } },
+      scales: {
+        x: axis({ stacked: true, max: 100, ticks: { color: MUTE, stepSize: 25, callback: function (v) { return v + '%'; } } }),
+        y: axis({ stacked: true, grid: { display: false }, afterFit: function (s) { s.width = Math.max(s.width, 132); }, ticks: { color: INK2, font: function (c) { return { weight: c.tick && c.tick.label === 'Overall' ? '700' : '400' }; } } })
+      },
+      plugins: { legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: function (c) { return c.dataset.label + ': ' + rows[c.dataIndex][c.datasetIndex + 1] + ' (' + c.raw.toFixed(1) + '%)'; } } },
+        endLabels: { datasets: [2], fmt: function (v, i) { return (100 * rows[i][1] / totals[i]).toFixed(1) + '%'; } } } }
+  });
+})();
+</script>
+</body>
+</html>
