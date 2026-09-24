@@ -1,5 +1,7 @@
 # Scholar Dossier Agent
 
+[Website](https://mo-arvan.github.io/scholar-dossier-agent/) | [Paper (arXiv)](https://arxiv.org/abs/2607.16989) | Contact: Mohammad Arvan, [marvan3@uic.edu](mailto:marvan3@uic.edu)
+
 A human-in-the-loop AI agent that assembles an evidence dossier for a scholar and drafts
 one-sentence impact summaries from it, framed by the Translational Science Benefits Model (TSBM),
 for a person to accept, edit, or reject.
